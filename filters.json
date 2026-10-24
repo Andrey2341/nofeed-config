@@ -1,0 +1,203 @@
+{
+  "version": 3,
+  "minAppVersion": "1.0",
+
+  "_comment": "Selectors for instagram.com mobile web (iPhone Safari UA). `target` = human note. `group`: base/feed/reels/explore/suggested are always on (feed is skipped when the Pro 'Show feed from people you follow' toggle is on); stories/notifications are opt-in Pro filters. The app sets <html data-nofeed-route=...> from `routes` (first match wins) so rules can be scoped per page. bootstrap.js sets html[data-nofeed-auth=in|out] from the session cookie (feed rules only apply when logged in). observer.js tags Instagram's bottom nav / top bars with [data-nofeed-chrome], the stories tray with [data-nofeed-tray] (and hides the tray's sibling chain with [data-nofeed-hidden=feed]); sets html[data-nofeed-tray-ok] / [data-nofeed-tray-missing]. Keep CSS free of :not(:has()) over large subtrees: it stalled the WebContent process. Rules: prefer href/role/structure, never hashed classes, never visible text or aria-label without a language-neutral sibling rule.",
+
+  "routes": [
+    { "name": "login",    "pattern": "^/accounts/(login|emailsignup)/" },
+    { "name": "thread",   "pattern": "^/direct/t/" },
+    { "name": "inbox",    "pattern": "^/direct/" },
+    { "name": "viewer",   "pattern": "^/stories/" },
+    { "name": "tags",     "pattern": "^/explore/(tags|locations)/" },
+    { "name": "search",   "pattern": "^/explore/search/" },
+    { "name": "explore",  "pattern": "^/explore/" },
+    { "name": "reels",    "pattern": "^/reels/?$" },
+    { "name": "reel",     "pattern": "^/(reel|reels)/[A-Za-z0-9_-]+/?" },
+    { "name": "post",     "pattern": "^/p/|^/[A-Za-z0-9._]+/(p|reel)/[A-Za-z0-9_-]+/?" },
+    { "name": "activity", "pattern": "^/(notifications|accounts/activity)/" },
+    { "name": "accounts", "pattern": "^/accounts/" },
+    { "name": "home",     "pattern": "^/$" },
+    { "name": "profile",  "pattern": "^/[A-Za-z0-9._]+/?(tagged/|reels/|saved/)?$" }
+  ],
+
+  "spa": {
+    "_comment": "Tab taps are in-page navigations (bootstrap.js spaNavigate): click Instagram's own link for the route when one exists in the DOM, else history.pushState + popstate; load(url) only if the route has not changed within timeoutMs. markers = selectors (from docs/dom) that prove the route's content rendered.",
+    "timeoutMs": 1500,
+    "markers": {
+      "home": "[data-pagelet=\"story_tray\"]",
+      "inbox": "[data-pagelet=\"IGDInboxThreadListScrollableAreaPagelet\"], a[href=\"/direct/new/\"]",
+      "activity": "section h1, main h1",
+      "profile": "main header, a[href=\"/accounts/edit/\"]",
+      "search": "input[type=\"search\"]",
+      "thread": "textarea, [contenteditable=\"true\"]"
+    }
+  },
+
+  "account": {
+    "_comment": "Settings → Instagram. switcherSelector = Instagram's own 'username ⌄' button in the own-profile header (docs/dom/profile.html: header > h1 > div[role=button] with the chevron svg); NF.openAccountSwitcher taps it and Instagram shows its account switcher (switch / add account). settingsPath = Instagram's settings page, loaded inside the Profile tab (the header link to it is hidden, NoFeed's gear sits in its slot). dialogSelector = modal layers; while one is visible observer.js posts overlay 'dialog' and the native tab bar hides, so a bottom sheet is never under the glass bar. Sheets without a dialog role are detected by geometry (fixed, bottom-anchored, 120px..85% tall, not a nav).",
+    "switcherSelector": "header h1 [role=\"button\"]",
+    "settingsPath": "/accounts/settings/?entrypoint=profile",
+    "dialogSelector": "[role=\"dialog\"]"
+  },
+
+  "chrome": {
+    "_comment": "Bottom nav detection (observer.js, see docs/DOM-NOTES.md): a fixed/sticky bar in the bottom band (elementsFromPoint) with >= 3 links whose parsed pathnames match one companion regex AND one anchor regex; <= maxHeight tall, >= 60% wide. hrefs are not clean (/?nb=l, /u/direct/), hence regexes on pathnames. Links stay in the DOM when CSS hides them. topBarRoutes: routes where any sticky bar at the top is Instagram chrome.",
+    "bottomNavAnchors": ["^/reels/?$", "^/explore/?$", "^/direct/", "^/u/direct/", "^/u/profile/"],
+    "bottomNavCompanions": ["^/$"],
+    "bottomNavMaxHeight": 120,
+    "topBarRoutes": ["home"],
+    "immersiveRoutes": ["thread", "viewer", "reel", "post"],
+    "headerlessRoutes": ["home", "viewer"],
+    "navRoutes": ["home", "inbox", "explore", "search", "tags", "activity", "profile", "post", "accounts"]
+  },
+
+  "stories": {
+    "_comment": "Tray detection on the home route (observer.js, docs/dom/stories.html): 0 traySelector (Instagram's own data-pagelet hook; items are [role=button] with <canvas> ring + <img>, first item = your story), 1 smallest ancestor holding every /stories/ link, 2 a horizontally scrollable strip (60-200px tall, >= 2 images, no article/video), 3 trayFallbackSelector. When tagged, every sibling along the tray -> main chain is hidden (keep-only-tray). When not tagged within trayTimeoutMs only the CSS article/spinner rules apply. layout: tray | grid (step 3).",
+    "layout": "tray",
+    "keepOnlyTray": true,
+    "traySelector": "[data-pagelet=\"story_tray\"]",
+    "trayItemSelector": "[role=\"button\"]",
+    "addSelector": "[data-pagelet=\"story_tray\"] [role=\"button\"]",
+    "newPostSelector": "input[type=\"file\"][accept=\"image/jpeg\"]",
+    "trayLinkSelector": "a[href^=\"/stories/\"]",
+    "trayFallbackSelector": "ul:has(li button img), ul:has(li [role=\"button\"] img)",
+    "trayTimeoutMs": 2500
+  },
+
+  "hide": [
+    { "target": "activity: 'Suggested for you' title (an h4 block followed by the suggestions list with its /explore/people/ link)",
+      "selector": "main div:has(> h4):has(+ div a[href^=\"/explore/people\"])",
+      "group": "suggested" },
+    { "target": "activity: suggestions list (contains the 'see all suggestions' /explore/people/ link)",
+      "selector": "main div:has(> h4) + div:has(a[href^=\"/explore/people\"])",
+      "group": "suggested" },
+    { "target": "profile header: Instagram's settings link (left) and the Threads link (right); NoFeed's own gear takes the left slot",
+      "selector": "html[data-nofeed-route=\"profile\"] div:has(> a[href^=\"/accounts/settings\"]), html[data-nofeed-route=\"profile\"] div:has(> span a[href*=\"threads.\"])",
+      "group": "base" },
+    { "target": "inbox: back arrow in Instagram's inbox header (first child of the bar that holds the /direct/new/ link)",
+      "selector": "html[data-nofeed-route=\"inbox\"] div:has(> div > a[href=\"/direct/new/\"]) > div:first-child:has([role=\"button\"] svg), html[data-nofeed-route=\"inbox\"] div:has(> div > div > a[href=\"/direct/new/\"]) > div:first-child:has([role=\"button\"] svg)",
+      "group": "base" },
+    { "target": "reel viewer: everything after the single allowed item, and the next-reel loader (a progressbar that is not inside a reel item)",
+      "selector": "[data-reel-type=\"reshared\"] ~ *, [data-nofeed-locked] > * + *",
+      "group": "reels" },
+    { "target": "chrome: Instagram's bottom nav / top bars tagged by observer.js (structural, language independent)",
+      "selector": "[data-nofeed-chrome]",
+      "group": "base" },
+    { "target": "chrome: bottom nav before JS tagging runs - any nav/navigation element that links to Explore or Reels",
+      "selector": "nav:has(a[href=\"/explore/\"]), nav:has(a[href=\"/reels/\"]), [role=\"navigation\"]:has(a[href=\"/explore/\"]), [role=\"navigation\"]:has(a[href=\"/reels/\"]), footer:has(a[href=\"/explore/\"])",
+      "group": "base" },
+    { "target": "chrome: top header on the home route ('For you' dropdown, +, heart). Activity keeps its own title bar like the real app.",
+      "selector": "html[data-nofeed-route=\"home\"] header, html[data-nofeed-route=\"home\"] [role=\"banner\"]",
+      "group": "base" },
+    { "target": "chrome blanket at documentStart (before JS can tag the bar): the nav items themselves, by href prefix. The bar's dark background may remain for a frame; the JS tag removes it.",
+      "selector": "a[href^=\"/u/direct/\"], a[href^=\"/u/profile/\"], a[href^=\"/?nb=\"], a[href=\"/direct/inbox/\"][role=\"link\"], a[role=\"link\"][href^=\"/explore/\"], a[role=\"link\"][href^=\"/reels/\"]",
+      "group": "base" },
+    { "target": "chrome: links to the Reels tab and the Explore grid anywhere (nav, header, profile tabs); query-string variants included",
+      "selector": "a[href=\"/reels/\"], a[href^=\"/reels/?\"], a[href=\"/explore/\"], a[href^=\"/explore/?\"]",
+      "group": "base" },
+    { "target": "chrome: Reels/Explore icons by aria-label (English UI) when they are not links",
+      "selector": "div[role=\"button\"]:has(> svg[aria-label=\"Reels\"]), div[role=\"link\"]:has(svg[aria-label=\"Reels\"]), div[role=\"button\"]:has(> svg[aria-label=\"Explore\"])",
+      "group": "base" },
+    { "target": "chrome: 'Open Instagram' / app-install bars that live outside main (header or sticky footer) with App Store links",
+      "selector": "body > div:has(> a[href*=\"apps.apple.com\"]), header a[href*=\"apps.apple.com\"]",
+      "group": "base" },
+
+    { "target": "home feed: post cards and everything rendered after them (spinner, caught-up, suggestions). The tray-only view is done by observer.js (keep-only-tray) on top of this.",
+      "selector": "html[data-nofeed-route=\"home\"][data-nofeed-auth=\"in\"] main article, html[data-nofeed-route=\"home\"][data-nofeed-auth=\"in\"] main article ~ *",
+      "group": "feed" },
+    { "target": "home feed: feed container variants and loading spinners",
+      "selector": "html[data-nofeed-route=\"home\"][data-nofeed-auth=\"in\"] main div[role=\"feed\"], html[data-nofeed-route=\"home\"][data-nofeed-auth=\"in\"] main [data-visualcompletion=\"loading-state\"], html[data-nofeed-route=\"home\"][data-nofeed-auth=\"in\"] main [role=\"progressbar\"], html[data-nofeed-route=\"home\"][data-nofeed-auth=\"in\"] main svg[aria-label] circle",
+      "group": "feed" },
+
+    { "target": "DM reel viewer (docs/dom/reel.html): Instagram stacks the shared reel (data-reel-type=reshared) with suggested reels below it; hide everything that is not the shared one",
+      "selector": "[data-reel-type]:not([data-reel-type=\"reshared\"])",
+      "group": "reels" },
+    { "target": "reels route: the whole infinite viewer if a navigation ever lands on /reels/ before the redirect fires",
+      "selector": "html[data-nofeed-route=\"reels\"] main",
+      "group": "reels" },
+
+    { "target": "explore grid: post/reel tiles on /explore/ and below the search box on /explore/search/ (account/tag/place results are different links and stay visible)",
+      "selector": "html[data-nofeed-route=\"explore\"] main a[href^=\"/p/\"], html[data-nofeed-route=\"explore\"] main a[href^=\"/reel/\"], html[data-nofeed-route=\"explore\"] main a[href^=\"/reels/\"], html[data-nofeed-route=\"search\"] main a[href^=\"/p/\"], html[data-nofeed-route=\"search\"] main a[href^=\"/reel/\"], html[data-nofeed-route=\"search\"] main a[href^=\"/reels/\"]",
+      "group": "explore" },
+    { "target": "explore grid: <article> wrappers of the tile grid (some variants wrap the grid in an article)",
+      "selector": "html[data-nofeed-route=\"explore\"] main article, html[data-nofeed-route=\"search\"] main article",
+      "group": "explore" },
+
+    { "target": "suggested accounts: 'Suggested for you' carousels link to /explore/people/ via 'See all'; hide the list that follows that link's container",
+      "selector": "a[href=\"/explore/people/\"] ~ ul, a[href=\"/explore/people/\"] ~ div > ul, div:has(> a[href=\"/explore/people/\"]) + ul",
+      "group": "suggested" },
+
+    { "target": "stories (opt-in Pro filter): the tagged tray and any list of story avatars on home",
+      "selector": "[data-nofeed-tray], html[data-nofeed-route=\"home\"] main ul:has(li button img)",
+      "group": "stories" },
+    { "target": "stories (opt-in Pro filter): links into the story viewer anywhere",
+      "selector": "a[href^=\"/stories/\"]",
+      "group": "stories" },
+
+    { "target": "notifications (opt-in Pro filter): activity link in the web nav/header",
+      "selector": "a[href=\"/accounts/activity/\"], a[href=\"/notifications/\"], a:has(svg[aria-label=\"Notifications\"])",
+      "group": "notifications" }
+  ],
+
+  "hideTextMatch": [
+    { "target": "suggested accounts/posts blocks: heading text; hides the nearest article/section/list container (size-guarded in observer.js)",
+      "selector": "span, h2, h3, h4, div",
+      "text": ["Suggested for you", "Suggested posts", "Suggested reels", "Suggested Reels", "Рекомендації для вас", "Рекомендовані дописи"],
+      "closest": "article, section, div:has(> ul), div:has(> div > ul)",
+      "group": "suggested" },
+    { "target": "'Sponsored' posts outside the feed (profiles, explore)",
+      "selector": "span",
+      "text": ["Sponsored", "Реклама"],
+      "closest": "article",
+      "group": "suggested" }
+  ],
+
+  "blockPaths": [
+    "^/reels/?$",
+    "^/reels/(audio|videos|explore)/",
+    "^/explore/?$",
+    "^/explore/people/?"
+  ],
+  "allowPaths": [
+    "^/reel/[A-Za-z0-9_-]+/?$",
+    "^/reels/[A-Za-z0-9_-]+/?$",
+    "^/explore/search/",
+    "^/explore/tags/",
+    "^/explore/locations/"
+  ],
+  "redirects": {
+    "^/reels/?$": "/direct/inbox/",
+    "^/reels/(audio|videos|explore)/": "/direct/inbox/",
+    "^/explore/people/?": "/direct/inbox/",
+    "^/explore/?$": "/explore/search/"
+  },
+  "defaultRedirect": "/direct/inbox/",
+
+  "banners": [
+    { "target": "App Store links used by every 'Get the app' banner variant", "selector": "a[href*=\"apps.apple.com\"], a[href*=\"itunes.apple.com\"]" },
+    { "target": "deep links that try to open the native app", "selector": "a[href^=\"instagram://\"], a[href^=\"intent://\"]" },
+    { "target": "'Download app' footer/bottom sheet with app badges", "selector": "img[alt=\"Get it on Google Play\"], img[alt=\"Download on the App Store\"], img[alt=\"Get it from Microsoft\"]" }
+  ],
+  "bannerTexts": ["Use the app", "Use app", "Open app", "Open Instagram", "Open in app", "Get the app", "Get app", "Switch to the app", "Download the app", "Install app", "Відкрити додаток", "Використовувати додаток", "Відкрити в додатку", "Відкрити Instagram"],
+  "bannerDismissTexts": ["Not now", "Not Now", "Cancel", "Close", "Dismiss", "Не зараз", "Скасувати"],
+
+  "reel": {
+    "previewSelector": "[aria-roledescription=\"message\"] [role=\"button\"] [role=\"button\"]",
+    "_comment": "Single reel from a DM. Two forms exist: a /reel/{id}/ page, and an in-thread overlay viewer (docs/dom/reel.html) whose items carry data-reel-type (reshared | suggested) without a URL change. reelLimiter.js treats the page as 'reel mode' when the route is reel OR viewerItemSelector matches: locks vertical scrolling in the video container, blocks vertical swipes, bounces back on a reel-id change. Suggested items are hidden by the base rule above.",
+    "viewerItemSelector": "[data-reel-type]",
+    "allowedItemTypes": ["reshared"],
+    "hide": [
+      { "target": "reel viewer: links to the Reels tab from inside the viewer", "selector": "html[data-nofeed-route=\"reel\"] a[href=\"/reels/\"]" },
+      { "target": "reel viewer: next/previous arrows (English aria-labels)", "selector": "html[data-nofeed-route=\"reel\"] button:has(svg[aria-label=\"Next\"]), html[data-nofeed-route=\"reel\"] button:has(svg[aria-label=\"Previous\"]), html[data-nofeed-route=\"reel\"] [aria-label=\"Next\"], html[data-nofeed-route=\"reel\"] [aria-label=\"Previous\"]" }
+    ]
+  },
+
+  "username": {
+    "_comment": "Discovery order (observer.js): 1 own-profile link in the bottom nav (the only /{name}/ link there, avatar = its <img>), 2 own profile page = has an Edit-profile link, 3 server-rendered page JSON \"viewer\":{\"username\"}, 4 /accounts/edit/ input. reservedPaths are top-level segments that are not usernames.",
+    "editProfileLink": "a[href=\"/accounts/edit/\"]",
+    "inputSelectors": ["input[name=\"username\"]", "#pepUsername"],
+    "reservedPaths": ["u", "explore", "reels", "reel", "direct", "accounts", "stories", "p", "tv", "about", "legal", "developer", "press", "api", "privacy", "terms", "locations", "directory", "lite", "web", "challenge", "emails", "session", "nametag", "igtv", "create", "your_activity", "archive", "topics", "guide", "guides", "download", "help", "threads", "ar", "oauth", "static", "notes", "live"],
+    "loginPathPattern": "^/accounts/(login|emailsignup)/"
+  }
+}
