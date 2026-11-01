@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "minAppVersion": "1.0",
 
   "_comment": "Selectors for instagram.com mobile web (iPhone Safari UA). `target` = human note. `group`: base/feed/reels/explore/suggested are always on (feed is skipped when the Pro 'Show feed from people you follow' toggle is on); stories/notifications are opt-in Pro filters. The app sets <html data-nofeed-route=...> from `routes` (first match wins) so rules can be scoped per page. bootstrap.js sets html[data-nofeed-auth=in|out] from the session cookie (feed rules only apply when logged in). observer.js tags Instagram's bottom nav / top bars with [data-nofeed-chrome], the stories tray with [data-nofeed-tray] (and hides the tray's sibling chain with [data-nofeed-hidden=feed]); sets html[data-nofeed-tray-ok] / [data-nofeed-tray-missing]. Keep CSS free of :not(:has()) over large subtrees: it stalled the WebContent process. Rules: prefer href/role/structure, never hashed classes, never visible text or aria-label without a language-neutral sibling rule.",
@@ -17,6 +17,7 @@
     { "name": "post",     "pattern": "^/p/|^/[A-Za-z0-9._]+/(p|reel)/[A-Za-z0-9_-]+/?" },
     { "name": "activity", "pattern": "^/(notifications|accounts/activity)/" },
     { "name": "accounts", "pattern": "^/accounts/" },
+    { "name": "create", "pattern": "^/create/" },
     { "name": "home",     "pattern": "^/$" },
     { "name": "profile",  "pattern": "^/[A-Za-z0-9._]+/?(tagged/|reels/|saved/)?$" }
   ],
@@ -47,7 +48,7 @@
     "bottomNavCompanions": ["^/$"],
     "bottomNavMaxHeight": 120,
     "topBarRoutes": ["home"],
-    "immersiveRoutes": ["thread", "viewer", "reel", "post", "accounts"],
+    "immersiveRoutes": ["thread", "viewer", "reel", "post", "accounts", "create"],
     "headerlessRoutes": ["home", "viewer"],
     "navRoutes": ["home", "inbox", "explore", "search", "tags", "activity", "profile", "post", "accounts"]
   },
