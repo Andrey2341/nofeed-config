@@ -1,5 +1,5 @@
 {
-  "version": 5,
+  "version": 6,
   "minAppVersion": "1.0",
 
   "_comment": "Selectors for instagram.com mobile web (iPhone Safari UA). `target` = human note. `group`: base/feed/reels/explore/suggested are always on (feed is skipped when the Pro 'Show feed from people you follow' toggle is on); stories/notifications are opt-in Pro filters. The app sets <html data-nofeed-route=...> from `routes` (first match wins) so rules can be scoped per page. bootstrap.js sets html[data-nofeed-auth=in|out] from the session cookie (feed rules only apply when logged in). observer.js tags Instagram's bottom nav / top bars with [data-nofeed-chrome], the stories tray with [data-nofeed-tray] (and hides the tray's sibling chain with [data-nofeed-hidden=feed]); sets html[data-nofeed-tray-ok] / [data-nofeed-tray-missing]. Keep CSS free of :not(:has()) over large subtrees: it stalled the WebContent process. Rules: prefer href/role/structure, never hashed classes, never visible text or aria-label without a language-neutral sibling rule.",
@@ -188,6 +188,7 @@
     "_comment": "Single reel from a DM. Two forms exist: a /reel/{id}/ page, and an in-thread overlay viewer (docs/dom/reel.html) whose items carry data-reel-type (reshared | suggested) without a URL change. reelLimiter.js treats the page as 'reel mode' when the route is reel OR viewerItemSelector matches: locks vertical scrolling in the video container, blocks vertical swipes, bounces back on a reel-id change. Suggested items are hidden by the base rule above.",
     "viewerItemSelector": "[data-reel-type]",
     "allowedItemTypes": ["reshared"],
+    "composerSelector": "#igwd-threadline-reply-composer-container, [data-reel-type] div:has(> div > div > textarea)",
     "hide": [
       { "target": "reel viewer: links to the Reels tab from inside the viewer", "selector": "html[data-nofeed-route=\"reel\"] a[href=\"/reels/\"]" },
       { "target": "reel viewer: next/previous arrows (English aria-labels)", "selector": "html[data-nofeed-route=\"reel\"] button:has(svg[aria-label=\"Next\"]), html[data-nofeed-route=\"reel\"] button:has(svg[aria-label=\"Previous\"]), html[data-nofeed-route=\"reel\"] [aria-label=\"Next\"], html[data-nofeed-route=\"reel\"] [aria-label=\"Previous\"]" }
