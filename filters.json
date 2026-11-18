@@ -1,5 +1,5 @@
 {
-  "version": 6,
+  "version": 7,
   "minAppVersion": "1.0",
 
   "_comment": "Selectors for instagram.com mobile web (iPhone Safari UA). `target` = human note. `group`: base/feed/reels/explore/suggested are always on (feed is skipped when the Pro 'Show feed from people you follow' toggle is on); stories/notifications are opt-in Pro filters. The app sets <html data-nofeed-route=...> from `routes` (first match wins) so rules can be scoped per page. bootstrap.js sets html[data-nofeed-auth=in|out] from the session cookie (feed rules only apply when logged in). observer.js tags Instagram's bottom nav / top bars with [data-nofeed-chrome], the stories tray with [data-nofeed-tray] (and hides the tray's sibling chain with [data-nofeed-hidden=feed]); sets html[data-nofeed-tray-ok] / [data-nofeed-tray-missing]. Keep CSS free of :not(:has()) over large subtrees: it stalled the WebContent process. Rules: prefer href/role/structure, never hashed classes, never visible text or aria-label without a language-neutral sibling rule.",
@@ -22,6 +22,19 @@
     { "name": "profile",  "pattern": "^/[A-Za-z0-9._]+/?(tagged/|reels/|saved/)?$" }
   ],
 
+  "recovery": {
+    "_comment": "Page health (bootstrap.js health()): stubGlobal is the queue Instagram's inline scripts fill until its module runtime loads; still an array after the load event = the app never booted (device log 2026-11-12) and native reloads the page. splashSelector is Instagram's launch splash layer.",
+    "stubGlobal": "__d_stub",
+    "splashSelector": "#splash-screen",
+    "contentSelector": "div",
+    "minContent": 30
+  },
+  "badges": {
+    "_comment": "Unread counters for the native tab badges (1.1 backlog 5b): observer.js reads the number (or the red dot) Instagram draws inside its own links to the inbox and to notifications.",
+    "messagesLink": "a[href^=\"/direct/inbox\"]",
+    "activityLink": "a[href^=\"/notifications\"], a[href^=\"/accounts/activity\"]"
+  },
+
   "spa": {
     "_comment": "Tab taps are in-page navigations (bootstrap.js spaNavigate): click Instagram's own link for the route when one exists in the DOM, else history.pushState + popstate; load(url) only if the route has not changed within timeoutMs. markers = selectors (from docs/dom) that prove the route's content rendered.",
     "timeoutMs": 1500,
@@ -39,6 +52,8 @@
     "_comment": "Settings → Instagram. switcherSelector = Instagram's own 'username ⌄' button in the own-profile header (docs/dom/profile.html: header > h1 > div[role=button] with the chevron svg); NF.openAccountSwitcher taps it and Instagram shows its account switcher (switch / add account). settingsPath = Instagram's settings page, loaded inside the Profile tab (the header link to it is hidden, NoFeed's gear sits in its slot). dialogSelector = modal layers; while one is visible observer.js posts overlay 'dialog' and the native tab bar hides, so a bottom sheet is never under the glass bar. Sheets without a dialog role are detected by geometry (fixed, bottom-anchored, 120px..85% tall, not a nav).",
     "switcherSelector": "header h1 [role=\"button\"]",
     "settingsPath": "/accounts/settings/?entrypoint=profile",
+    "saveLoginPath": "/accounts/onetap/",
+    "savedLoginsKey": "one_tap_storage_version",
     "dialogSelector": "[role=\"dialog\"]"
   },
 
@@ -50,6 +65,14 @@
     "topBarRoutes": ["home"],
     "immersiveRoutes": ["thread", "viewer", "reel", "post", "accounts", "create"],
     "headerlessRoutes": ["home", "viewer"],
+    "viewerHeaderKeepSelector": "time",
+    "keyboardResizeRoutes": ["post"],
+    "noRefreshRoutes": ["search"],
+    "liveTabs": 2,
+    "idleUnloadSeconds": 30,
+    "mediaViewerSelector": "div:has(> [role=\"presentation\"] a[download])",
+    "mediaViewerCloseSelector": "a[download] + [role=\"button\"]",
+    "soloRoutes": ["viewer", "reel"],
     "navRoutes": ["home", "inbox", "explore", "search", "tags", "activity", "profile", "post", "accounts"]
   },
 
@@ -117,6 +140,13 @@
     { "target": "reels route: the whole infinite viewer if a navigation ever lands on /reels/ before the redirect fires",
       "selector": "html[data-nofeed-route=\"reels\"] main",
       "group": "reels" },
+
+    { "target": "Activity root: Instagram's back arrow leads to the home page, which is another tab here (1.1 backlog 4); nested activity pages have other back targets and keep theirs",
+      "selector": "html[data-nofeed-route=\"activity\"] header a[href=\"/\"]",
+      "group": "base" },
+    { "target": "Search: 'Cancel' next to the field leads to /explore/, which is blocked, so the page only reloaded (1.1 backlog 4a); the field's own clear button stays",
+      "selector": "html[data-nofeed-route=\"search\"] div:has(> label input[type=\"search\"]) + div:has(> [role=\"button\"])",
+      "group": "base" },
 
     { "target": "explore grid: post/reel tiles on /explore/ and below the search box on /explore/search/ (account/tag/place results are different links and stay visible)",
       "selector": "html[data-nofeed-route=\"explore\"] main a[href^=\"/p/\"], html[data-nofeed-route=\"explore\"] main a[href^=\"/reel/\"], html[data-nofeed-route=\"explore\"] main a[href^=\"/reels/\"], html[data-nofeed-route=\"search\"] main a[href^=\"/p/\"], html[data-nofeed-route=\"search\"] main a[href^=\"/reel/\"], html[data-nofeed-route=\"search\"] main a[href^=\"/reels/\"]",
